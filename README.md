@@ -5,32 +5,42 @@
 
 # LoRa-RF Python Library
 
+A drop-in replacement library for [chandrawi
+/ LoRaRF-Python](https://github.com/chandrawi/LoRaRF-Python) for the Orange Pi Zero2 SBC.
+
 LoRa-RF Python is a library for basic transmitting and receiving data using LoRa module with Semtech SX126x series, SX127x series, or LLCC68. The library works by interfacing SPI port and some GPIO pins under linux kernel. Support configuring frequency, modulation parameter, transmit power, receive gain and other RF parameters on both LoRa and FSK modulation also support handling transmit and receive using interrupt signal.
 
-This readme is written for quick start guide. Visit this [link](https://github.com/chandrawi/LoRaRF-Python/wiki) for complete documentation.
+This readme is written for quick start guide. Visit this [link](https://gitlab.com/Mark-Walen/LoRaRF-Python/wiki) for complete documentation.
 
 ## Hardware Compatibility
 
 Theoritically all LoRa modules using SX126x series (SX1261, SX1262, SX1268), SX127x series (SX1272, SX1276, SX1277, SX1278, SX1279), or LLCC68 will compatible using this library. Some LoRa module which already tested and confirmed compatible are:
 * Ebyte: E22-400M22S, E22-900M22S, E22-400M30S, E22-900M30S
 
-Currently only Raspberry pi zero, zero W, 3A, 3B, 3B+, 4A, and 4B supported as host controller. Support for other single board computer will be added in the future. The Linux distro already tested using this library are:
-* Raspberry pi OS
+Currently only Orangepi pi zero2, zero W, 3A, 3B, 3B+, 4A, and 4B supported as host controller. Support for other single board computer will be added in the future. The Linux distro already tested using this library are:
+* Orangepi zero2 SBC
 * Ubuntu Core 32-bit
 
-In order to connect to a LoRa module, SPI port must be enabled. For Raspberry pi OS, this is done by set SPI interface enable using raspi-config or edit `/boot/config.txt` by adding following line.
+In order to connect to a LoRa module, SPI port must be enabled. For Orangepi OS, this is done by set SPI interface enable using raspi-config or edit `/boot/orangepiEnv.txt` by adding following line.
 ```txt
-dtparam=spi=on
+overlays=spi-spidev
+param_spidev_spi_bus=1
+param_spidev_spi_cs=1
 ```
+
+## Dependencies
+
+### Python Spidev
+[**Python Spidev**](https://pypi.org/project/spidev/): This project contains a python module for interfacing with SPI devices from user space via the spidev linux kernel driver.
+
+use `sudo pip3 install spidev` to install.
+
+### wiringOP-Python
+[**wiringOP-Python**](https://github.com/orangepi-xunlong/wiringOP-Python.git): An implementation of most of the Arduino Wiring functions for the Orange Pi.
+
+Click <mark style="padding: 2px;">Uper Link</mark> for installation and more details.
 
 ## Installation
-
-### Using pip
-
-Using terminal run following command.
-```sh
-pip3 install LoRaRF
-```
 
 ### Using Git and Build Package
 
@@ -70,16 +80,16 @@ Power pins, SPI pins, `RESET`, and `BUSY` pins must be connected between host co
 
 The default SPI port is using bus id 0 and cs id 0. The default GPIO pins used for connecting to SX126x and SX127x with Broadcom pin numbering are as follows.
 
-| Semtech SX126x | Semtech SX127x | Raspberry Pi |
+| Semtech SX126x | Semtech SX127x | Orange Pi |
 | :------------: | :-------------:| :-----------:|
 | VCC | VCC | 3.3V |
 | GND | GND | GND |
-| SCK | SCK | GPIO 11 |
-| MISO | MISO | GPIO 9 |
-| MOSI | MOSI | GPIO 10 |
-| NSS | NSS | GPIO 8 |
-| RESET | RESET | GPIO 22 |
-| BUSY | | GPIO 23|
+| SCK | SCK | GPIO 14 |
+| MISO.1 | MISO.1 | GPIO 12 |
+| MISO.1 | MISO.1 | GPIO 11 |
+| NSS | NSS | GPIO 15 |
+| RESET | RESET | GPIO 8 |
+| BUSY | | GPIO 7|
 | DIO1 | DIO1 | -1 (unused) |
 | TXEN | TXEN | -1 (unused) |
 | RXEN | RXEN | -1 (unused) |
