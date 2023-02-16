@@ -1,12 +1,9 @@
 from .base import BaseLoRa
 import spidev
-import RPi.GPIO
+from wiringpi import GPIO as gpio
 import time
 
 spi = spidev.SpiDev()
-gpio = RPi.GPIO
-gpio.setmode(RPi.GPIO.BCM)
-gpio.setwarnings(False)
 
 class SX127x(BaseLoRa) :
     """Class for SX1276/77/78/79 LoRa chipsets from Semtech"""
