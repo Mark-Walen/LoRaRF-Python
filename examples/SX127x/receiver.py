@@ -6,11 +6,11 @@ import time
 
 # Begin LoRa radio and set NSS, reset, busy, IRQ, txen, and rxen pin with connected Raspberry Pi gpio pins
 # IRQ pin not used in this example (set to -1). Set txen and rxen pin to -1 if RF module doesn't have one
-busId = 1; csId = 0
-resetPin = 22; irqPin = -1; txenPin = -1; rxenPin = -1
+busId = 1; csId = 1
+nssPin = 15; resetPin = 8; irqPin = -1; txenPin = -1; rxenPin = -1
 LoRa = SX127x()
 print("Begin LoRa radio")
-if not LoRa.begin(busId, csId, resetPin, irqPin, txenPin, rxenPin) :
+if not LoRa.begin(busId, csId, nssPin, resetPin, irqPin, txenPin, rxenPin) :
     raise Exception("Something wrong, can't begin LoRa radio")
 
 # Set frequency to 915 Mhz

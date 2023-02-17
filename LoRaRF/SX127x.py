@@ -1,10 +1,11 @@
 from .base import BaseLoRa
 import spidev
-from wiringpi import GPIO as gpio
+import wiringpi
+from wiringpi import GPIO
 import time
 
 spi = spidev.SpiDev()
-
+gpio = GPIO()
 class SX127x(BaseLoRa) :
     """Class for SX1276/77/78/79 LoRa chipsets from Semtech"""
 
@@ -150,6 +151,7 @@ class SX127x(BaseLoRa) :
     # SPI and GPIO pin setting
     _bus = 0
     _cs = 0
+    _nss = 15
     _reset = 22
     _irq = -1
     _txen = -1
@@ -184,7 +186,7 @@ class SX127x(BaseLoRa) :
 
 ### COMMON OPERATIONAL METHODS ###
 
-    def begin(self, bus: int = _bus, cs: int = _cs, reset: int = _reset, irq: int = _irq, txen: int = _txen, rxen: int = _rxen) -> bool :
+    def begin(self, bus: int = _bus, cs: int = _cs, nss: int = _nss, reset: int = _reset, irq: int = _irq, txen: int = _txen, rxen: int = _rxen) -> bool :
 
         # set spi and gpio pins
         self.setSpi(bus, cs)
@@ -205,14 +207,15 @@ class SX127x(BaseLoRa) :
 
         self.sleep()
         spi.close()
-        gpio.cleanup()
 
     def reset(self) :
 
+        # put nss pin to high
+        gpio.digitalWrite(self._nss, gpio.HIGH)
         # put reset pin to low then wait 5 ms
-        gpio.output(self._reset, gpio.LOW)
+        gpio.digitalWrite(self._reset, gpio.LOW)
         time.sleep(0.001)
-        gpio.output(self._reset, gpio.HIGH)
+        gpio.digitalWrite(self._reset, gpio.HIGH)
         time.sleep(0.005)
         # wait until device connected, return false when device too long to respond
         t = time.time()
@@ -250,17 +253,19 @@ class SX127x(BaseLoRa) :
         spi.lsbfirst = False
         spi.mode = 0
 
-    def setPins(self, reset: int, irq: int = -1, txen: int = -1, rxen: int = -1) :
+    def setPins(self, nss: int, reset: int, irq: int = -1, txen: int = -1, rxen: int = -1) :
 
+        self._nss = nss
         self._reset = reset
         self._irq = irq
         self._txen = txen
         self._rxen = rxen
         # set pins as input or output
-        gpio.setup(reset, gpio.OUT)
-        if irq != -1 : gpio.setup(irq, gpio.IN)
-        if txen != -1 : gpio.setup(txen, gpio.OUT)
-        if rxen != -1 : gpio.setup(rxen, gpio.OUT)
+        gpio.pinMode(nss, gpio.OUTPUT)
+        gpio.pinMode(reset, gpio.OUTPUT)
+        if irq != -1 : gpio.pinMode(irq, gpio.INPUT)
+        if txen != -1 : gpio.pinMode(txen, gpio.OUTPUT)
+        if rxen != -1 : gpio.pinMode(rxen, gpio.OUTPUT)
 
     def setCurrentProtection(self, current: int) :
 
@@ -466,10 +471,10 @@ class SX127x(BaseLoRa) :
 
         # save current txen and rxen pin state and set txen pin to high and rxen pin to low
         if self._txen != -1 and self._rxen != -1 :
-            self._txState = gpio.input(self._txen)
-            self._rxState = gpio.input(self._rxen)
-            gpio.output(self._txen, gpio.HIGH)
-            gpio.output(self._rxen, gpio.LOW)
+            self._txState = gpio.digitalRead(self._txen)
+            self._rxState = gpio.digitalRead(self._rxen)
+            gpio.digitalWrite(self._txen, gpio.HIGH)
+            gpio.digitalWrite(self._rxen, gpio.LOW)
 
     def endPacket(self, timeout: int = 0) -> bool :
 
@@ -494,8 +499,7 @@ class SX127x(BaseLoRa) :
         # set TX done interrupt on DIO0 and attach TX interrupt handler
         if self._irq != -1 :
             self.writeRegister(self.REG_DIO_MAPPING_1, self.DIO0_TX_DONE)
-            gpio.remove_event_detect(self._irq)
-            gpio.add_event_detect(self._irq, gpio.RISING, callback=self._interruptTx, bouncetime=10)
+            gpio.wiringPiISR(self._irq, gpio.INT_EDGE_RISING, self._interruptTx)
         return True
 
     def write(self, data, length: int = 0) :
@@ -541,10 +545,10 @@ class SX127x(BaseLoRa) :
 
         # save current txen and rxen pin state and set txen pin to low and rxen pin to high
         if self._txen != -1 and self._rxen != -1 :
-            self._txState = gpio.input(self._txen)
-            self._rxState = gpio.input(self._rxen)
-            gpio.output(self._txen, gpio.LOW)
-            gpio.output(self._rxen, gpio.HIGH)
+            self._txState = gpio.digitalRead(self._txen)
+            self._rxState = gpio.digitalRead(self._rxen)
+            gpio.digitalWrite(self._txen, gpio.LOW)
+            gpio.digitalWrite(self._rxen, gpio.HIGH)
 
         # set status to RX wait
         self._statusWait = self.STATUS_RX_WAIT
@@ -568,11 +572,10 @@ class SX127x(BaseLoRa) :
         # set RX done interrupt on DIO0 and attach RX interrupt handler
         if self._irq != -1 :
             self.writeRegister(self.REG_DIO_MAPPING_1, self.DIO0_RX_DONE)
-            gpio.remove_event_detect(self._irq)
             if timeout == self.RX_CONTINUOUS :
-                gpio.add_event_detect(self._irq, gpio.RISING, callback=self._interruptRxContinuous, bouncetime=10)
+                gpio.wiringPiISR(self._irq, gpio.INT_EDGE_RISING, self._interruptRxContinuous)
             else :
-                gpio.add_event_detect(self._irq, gpio.RISING, callback=self._interruptRx, bouncetime=10)
+                gpio.wiringPiISR(self._irq, gpio.INT_EDGE_RISING, self._interruptRx)
         return True
 
     def available(self) :
@@ -652,8 +655,8 @@ class SX127x(BaseLoRa) :
             # calculate transmit time and set back txen and rxen pin to previous state
             self._transmitTime = time.time() - self._transmitTime
             if self._txen != -1 and self._rxen != -1 :
-                gpio.output(self._txen, self._txState)
-                gpio.output(self._rxen, self._rxState)
+                gpio.digitalWrite(self._txen, self._txState)
+                gpio.digitalWrite(self._rxen, self._rxState)
 
         elif self._statusWait == self.STATUS_RX_WAIT :
             # terminate receive mode by setting mode to standby
@@ -663,8 +666,8 @@ class SX127x(BaseLoRa) :
             self._payloadTxRx = self.readRegister(self.REG_RX_NB_BYTES)
             # set back txen and rxen pin to previous state
             if self._txen != -1 and self._rxen != -1 :
-                gpio.output(self._txen, self._txState)
-                gpio.output(self._rxen, self._rxState)
+                gpio.digitalWrite(self._txen, self._txState)
+                gpio.digitalWrite(self._rxen, self._rxState)
 
         elif self._statusWait == self.STATUS_RX_CONTINUOUS :
             # set pointer to RX buffer base address and get packet payload length
@@ -739,8 +742,8 @@ class SX127x(BaseLoRa) :
 
         # set back txen and rxen pin to previous state
         if self._txen != -1 and self._rxen != -1 :
-            gpio.output(self._txen, self._txState)
-            gpio.output(self._rxen, self._rxState)
+            gpio.digitalWrite(self._txen, self._txState)
+            gpio.digitalWrite(self._rxen, self._rxState)
 
         # call onTransmit function
         if callable(self._onTransmit) :
@@ -759,8 +762,8 @@ class SX127x(BaseLoRa) :
 
         # set back txen and rxen pin to previous state
         if self._txen != -1 and self._rxen != -1 :
-            gpio.output(self._txen, self._txState)
-            gpio.output(self._rxen, self._rxState)
+            gpio.digitalWrite(self._txen, self._txState)
+            gpio.digitalWrite(self._rxen, self._rxState)
 
         # set pointer to RX buffer base address and get packet payload length
         self.writeRegister(self.REG_FIFO_ADDR_PTR, self.readRegister(self.REG_FIFO_RX_CURRENT_ADDR))
@@ -819,7 +822,10 @@ class SX127x(BaseLoRa) :
     def _transfer(self, address: int, data: int) ->int:
 
         buf = [address, data]
-        feedback = spi.xfer2(buf)
-        if (len(feedback) == 2) :
+        gpio.digitalWrite(self._nss, gpio.LOW)
+        # feedback = [0, 0]
+        len, feedback = wiringpi.wiringPiSPIDataRW(self._cs, bytes(buf))
+        gpio.digitalWrite(self._nss, gpio.HIGH)
+        if (len == 2) :
             return int(feedback[1])
         return -1

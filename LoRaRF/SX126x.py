@@ -376,7 +376,9 @@ class SX126x(BaseLoRa) :
         self._txen = txen
         self._rxen = rxen
         self._wake = wake
+        
         # set pins as input or output
+        gpio.pinMode(wake, gpio.OUTPUT)
         gpio.pinMode(reset, gpio.OUTPUT)
         # gpio.pinMode(wake, gpio.OUTPUT)
         gpio.pinMode(busy, gpio.INPUT)
@@ -1284,6 +1286,6 @@ class SX126x(BaseLoRa) :
         gpio.digitalWrite(self._wake, gpio.LOW)
         len, feedback = wiringpi.wiringPiSPIDataRW(self._cs, bytes(buf))
         gpio.digitalWrite(self._wake, gpio.HIGH)
-        list(feedback)
+        # print(list(feedback))
         # return tuple([0,0])
         return tuple(feedback[nAddress:])
