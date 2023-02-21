@@ -1287,5 +1287,4 @@ class SX126x(BaseLoRa) :
         len, feedback = wiringpi.wiringPiSPIDataRW(self._cs, bytes(buf))
         gpio.digitalWrite(self._wake, gpio.HIGH)
         # print(list(feedback))
-        # return tuple([0,0])
-        return tuple(feedback[nAddress:])
+        return tuple(feedback[nAddress+1:])
