@@ -1,0 +1,3 @@
+[submodule "wiringOP-Python"]
+	path = wiringOP-Python
+	url = https://github.com/orangepi-xunlong/wiringOP-Python.git

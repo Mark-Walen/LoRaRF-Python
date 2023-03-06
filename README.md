@@ -21,7 +21,7 @@ Currently only Orangepi pi zero2, zero W, 3A, 3B, 3B+, 4A, and 4B supported as h
 * Orangepi zero2 SBC
 * Ubuntu Core 32-bit
 
-In order to connect to a LoRa module, SPI port must be enabled. For Orangepi OS, this is done by set SPI interface enable using raspi-config or edit `/boot/orangepiEnv.txt` by adding following line.
+In order to connect to a LoRa module, SPI port must be enabled. For Orangepi OS, this is done by editing `/boot/orangepiEnv.txt` and adding following line.
 ```txt
 overlays=spi-spidev
 param_spidev_spi_bus=1
